@@ -1,0 +1,221 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using System;
+using UnityEngine.UI;
+using UnityEngine.Android;
+
+public class Display_data : MonoBehaviour
+{
+    public static int waterLevel=20;
+    public Text outputArea;
+    
+    //public Text outputArea1;
+    public Text gpsOut;
+    int tableSize;
+    public bool isUpdating;
+    public TextAsset textAssetData;
+    //[System.Serializable]
+
+    public static int getWaterLevel()
+    {
+        return waterLevel;
+    }
+   
+    public class player
+    {
+        public int pointid;
+        public float grid_code;
+        public float X;
+        public float Y;
+    }
+    [System.Serializable]
+    public class PlayerList
+    {
+        public player[] player;
+    }
+    public PlayerList myPlayerList = new PlayerList();
+    //static GPS gps;
+    //private static string loc = ;
+    //outputArea.text = loc;
+    public string compareData(string lat, string lon,float alt)
+    {
+
+        int precise, precise2;
+        if (lat.Substring(0, 1) == "-")
+        {
+            precise = 6;
+        }
+        else if (lat.Substring(0, 1) == "0")
+        {
+            precise = 1;
+        }
+        else
+        {
+            precise = 5;
+        }
+        if (lon.Substring(0, 1) == "-")
+        {
+            precise2 = 6;
+        }
+        else if (lon.Substring(0, 1) == "0")
+        {
+            precise2 = 1;
+        }
+        else
+        {
+            precise2 = 5;
+        }
+
+
+        for (int i = 0; i < tableSize; i++)
+        {
+            string datalat = myPlayerList.player[i].Y.ToString();
+            string datalon = myPlayerList.player[i].X.ToString();
+
+
+
+
+
+            if (string.Equals(datalat, lat.Substring(0, precise)) && string.Equals(datalon, lon.Substring(0, precise2)))
+            {
+                string level = "Water Level : " + myPlayerList.player[i].grid_code.ToString();
+                if (alt<40)
+                {
+                    waterLevel = (int)myPlayerList.player[i].grid_code;
+
+                }
+                else
+                {
+                    waterLevel = -10;
+                }
+
+              
+                
+                return level.Substring(0, 19);
+            }
+
+        }
+        return "Water Level : 0 ";
+
+    }
+
+    //public string Loc { get => loc; set => loc = value; }
+
+    void Start()
+    {
+        ReadCSV();
+        // if (loc = textAssetData)
+        //{
+        //outputArea.text = gpsOut.text;
+        // }
+        // outputArea.text = loc;
+    }
+
+    void ReadCSV()
+    {
+        string[] data = textAssetData.text.Split(new string[] { ",", "\n" }, StringSplitOptions.None);
+        tableSize = data.Length / 4 - 1;
+        string myString = Convert.ToString(tableSize);
+        myPlayerList.player = new player[tableSize];
+        //outputArea.text = loc.ToString();
+        for (int i = 0; i < tableSize; i++)
+        {
+            myPlayerList.player[i] = new player();
+
+            myPlayerList.player[i].pointid = int.Parse(data[4 * (i + 1)]);
+
+            myPlayerList.player[i].grid_code = float.Parse(data[4 * (i + 1) + 1]);
+
+            myPlayerList.player[i].X = float.Parse(data[4 * (i + 1) + 2]);
+
+            myPlayerList.player[i].Y = float.Parse(data[4 * (i + 1) + 3]);
+            // if (myPlayerList.player[i].X.ToString = loc.ToString)
+            //{
+            // outputArea.text = "YESS";
+            //}
+
+            // outputArea.text = myPlayerList.player[i].X.ToString();
+
+            // if (myPlayerList.player[i].X.ToString = loc.ToString)
+            //{
+            //  outputArea1.text = "YESS";
+            //}
+
+        }
+        //if (myPlayerList.player[i].X = loc)
+        //{
+        //outputArea.text = "YESS";
+        //}
+
+
+
+
+
+    }
+
+    private void Update()
+    {
+        if (!isUpdating)
+        {
+            StartCoroutine(GetLocation());
+            isUpdating = !isUpdating;
+        }
+    }
+    IEnumerator GetLocation()
+    {
+        if (!Permission.HasUserAuthorizedPermission(Permission.FineLocation))
+        {
+            Permission.RequestUserPermission(Permission.FineLocation);
+            Permission.RequestUserPermission(Permission.CoarseLocation);
+        }
+        // First, check if user has location service enabled
+        if (!Input.location.isEnabledByUser)
+            yield return new WaitForSeconds(10);
+
+        // Start service before querying location
+        Input.location.Start();
+
+        // Wait until service initializes
+        int maxWait = 10;
+        while (Input.location.status == LocationServiceStatus.Initializing && maxWait > 0)
+        {
+            yield return new WaitForSeconds(1);
+            maxWait--;
+        }
+
+        // Service didn't initialize in 20 seconds
+        if (maxWait < 1)
+        {
+            outputArea.text = "Timed out";
+            print("Timed out");
+            yield break;
+        }
+
+        // Connection has failed
+        if (Input.location.status == LocationServiceStatus.Failed)
+        {
+            outputArea.text = "Unable to determine device location";
+            print("Unable to determine device location");
+            yield break;
+        }
+        else
+        {
+            outputArea.text = compareData(Input.location.lastData.latitude.ToString(), Input.location.lastData.longitude.ToString(), Input.location.lastData.altitude);
+          
+            gpsOut.text = "Location: " + Input.location.lastData.latitude + " " + Input.location.lastData.longitude + " " + Input.location.lastData.altitude;
+            // outputArea.text = " 1,,2,3";
+            //outputArea.text = "Location: " + Input.location.lastData.latitude + " " + Input.location.lastData.longitude + " " + Input.location.lastData.altitude + 100f + " " + Input.location.lastData.horizontalAccuracy + " " + Input.location.lastData.timestamp;
+            // Access granted and location value could be retrieved
+            //gpsOut.text = print("Location: " + Input.location.lastData.latitude + " " + Input.location.lastData.longitude + " " + Input.location.lastData.altitude + " " + Input.location.lastData.horizontalAccuracy + " " + Input.location.lastData.timestamp);
+        }
+        //gpsOut.text = print("Location: " + Input.location.lastData.latitude.ToString(), + " " + Input.location.lastData.longitude.ToString(), + " " + Input.location.lastData.altitude.ToString(), + " " + Input.location.lastData.horizontalAccuracy.ToString(), + " " + Input.location.lastData.timestamp.ToString());
+
+
+
+
+        // Stop service if there is no need to query location updates continuously
+        isUpdating = !isUpdating;
+        Input.location.Stop();
+    }
+}
